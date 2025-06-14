@@ -65,11 +65,6 @@ async def transcribe_audio_file(file: UploadFile = File(...)):
 
 @app.post("/transcribe-file-oga/")
 async def transcribe_audio_file(file: UploadFile = File(...)):
-    if file.content_type not in [
-        "audio/wav", "audio/x-wav", "audio/wave", "audio/vnd.wave",
-        "audio/ogg", "audio/oga", "audio/opus"
-    ]:
-        return JSONResponse(status_code=400, content={"error": "Invalid content type. Please upload a .wav or .oga file."})
     try:
         audio_bytes = await file.read()
     except Exception:
