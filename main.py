@@ -5,6 +5,7 @@ import speech_recognition as sr
 import tempfile
 import base64
 import uvicorn
+from fastapi import UploadFile, File
 
 app = FastAPI()
 
@@ -17,6 +18,31 @@ async def transcribe_audio(data: AudioBase64):
         audio_bytes = base64.b64decode(data.audio_base64)
     except Exception as e:
         return JSONResponse(status_code=400, content={"error": "Invalid base64 audio"})
+
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
+        tmp.write(audio_bytes)
+        tmp_path = tmp.name
+
+    recognizer = sr.Recognizer()
+    with sr.AudioFile(tmp_path) as source:
+        audio = recognizer.record(source)
+    try:
+        text = recognizer.recognize_google(audio, language="es-ES")
+    except sr.UnknownValueError:
+        text = ""
+    except sr.RequestError as e:
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+    return {"text": text}
+
+@app.post("/transcribe-file/")
+async def transcribe_audio_file(file: UploadFile = File(...)):
+    if file.content_type != "application/octet-stream":
+        return JSONResponse(status_code=400, content={"error": "Invalid content type"})
+    try:
+        audio_bytes = await file.read()
+    except Exception:
+        return JSONResponse(status_code=400, content={"error": "Could not read file"})
 
     with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
         tmp.write(audio_bytes)
